@@ -2,6 +2,26 @@
 
 import { useState, useEffect } from "https://cdn.jsdelivr.net/npm/react@18.2.0/+esm"
 
+function Modal({ isOpen, onClose, title, children }) {
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center p-6 border-b border-slate-200">
+          <h2 className="text-xl font-semibold text-slate-800">{title}</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors duration-200">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  )
+}
+
 function Products({ token }) {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
@@ -18,6 +38,9 @@ function Products({ token }) {
   const [editingId, setEditingId] = useState(null)
   const [filterCategory, setFilterCategory] = useState("")
   const [loading, setLoading] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState("")
 
   const fetchProducts = async (categoryId = "") => {
     const url = categoryId
@@ -56,14 +79,71 @@ function Products({ token }) {
     setForm({ ...form, [name]: value })
   }
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    setSelectedFile(file)
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result)
+      }
+      reader.readAsDataURL(file)
+    } else {
+      setImagePreview("")
+    }
+  }
+
+  const handleImageUpload = async () => {
+    if (!selectedFile) return form.img_url || ""
+
+    const formData = new FormData()
+    formData.append("image", selectedFile)
+
+    try {
+      const response = await fetch("https://shop.uzjoylar.uz/img-upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.Message === "Successfully upload") {
+          return data.Url
+        } else {
+          throw new Error("Image upload failed")
+        }
+      } else {
+        throw new Error("Image upload failed")
+      }
+    } catch (err) {
+      console.error("Rasm yuklashda xatolik:", err)
+      return ""
+    }
+  }
+
   const handleCreateOrUpdate = async () => {
     if (!form.name.trim() || !form.category_id) return
 
     setLoading(true)
+    let imgUrl = form.img_url
+
+    // Upload image if a new file is selected
+    if (selectedFile) {
+      imgUrl = await handleImageUpload()
+      if (!imgUrl) {
+        setLoading(false)
+        return
+      }
+    }
+
     const url = editingId
       ? `https://shop.uzjoylar.uz/product/update?id=${editingId}`
       : "https://shop.uzjoylar.uz/product/create"
     const method = editingId ? "PUT" : "POST"
+
     try {
       await fetch(url, {
         method,
@@ -73,9 +153,10 @@ function Products({ token }) {
         },
         body: JSON.stringify({
           ...form,
-          count: parseInt(form.count),
-          price: parseFloat(form.price),
-          size: parseInt(form.size),
+          img_url: imgUrl,
+          count: Number.parseInt(form.count),
+          price: Number.parseFloat(form.price),
+          size: Number.parseInt(form.size),
         }),
       })
       setForm({
@@ -88,7 +169,10 @@ function Products({ token }) {
         size: 0,
         type: "g",
       })
+      setSelectedFile(null)
+      setImagePreview("")
       setEditingId(null)
+      setIsModalOpen(false)
       fetchProducts(filterCategory)
     } catch (err) {
       console.error("Mahsulotni saqlashda xatolik:", err)
@@ -100,6 +184,9 @@ function Products({ token }) {
   const handleEdit = (product) => {
     setForm(product)
     setEditingId(product.id)
+    setImagePreview(product.img_url || "")
+    setSelectedFile(null)
+    setIsModalOpen(true)
   }
 
   const handleDelete = async (id) => {
@@ -132,26 +219,59 @@ function Products({ token }) {
       size: 0,
       type: "g",
     })
+    setSelectedFile(null)
+    setImagePreview("")
     setEditingId(null)
+    setIsModalOpen(false)
+  }
+
+  const handleOpenCreateModal = () => {
+    setForm({
+      name: "",
+      category_id: "",
+      count: 0,
+      description: "",
+      img_url: "",
+      price: 0,
+      size: 0,
+      type: "g",
+    })
+    setSelectedFile(null)
+    setImagePreview("")
+    setEditingId(null)
+    setIsModalOpen(true)
   }
 
   const getCategoryName = (categoryId) => {
     const category = categories.find((cat) => cat.id === categoryId)
-    return category ? category.name : "Noma’lum"
+    return category ? category.name : "Noma'lum"
   }
 
   return (
     <div className="mx-auto p-8 container">
       <div className="mb-8">
-        <h1 className="mb-2 font-bold text-slate-800 text-4xl">Mahsulotlar</h1>
-        <p className="text-slate-600 text-lg">Mahsulot inventaringizni boshqaring</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="mb-2 font-bold text-slate-800 text-4xl">Mahsulotlar</h1>
+            <p className="text-slate-600 text-lg">Mahsulot inventaringizni boshqaring</p>
+          </div>
+          <button
+            onClick={handleOpenCreateModal}
+            className="flex items-center bg-gradient-to-r from-blue-600 hover:from-blue-700 to-blue-700 hover:to-blue-800 px-6 py-3 rounded-lg font-medium text-white transition-all duration-200"
+          >
+            <svg className="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Yangi Mahsulot
+          </button>
+        </div>
       </div>
 
-      {/* Product Form */}
-      <div className="bg-white shadow-lg mb-8 p-6 border border-slate-200 rounded-2xl">
-        <h2 className="mb-6 font-semibold text-slate-800 text-xl">
-          {editingId ? "Mahsulotni Tahrirlash" : "Yangi Mahsulot Qo‘shish"}
-        </h2>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCancel}
+        title={editingId ? "Mahsulotni Tahrirlash" : "Yangi Mahsulot Qo'shish"}
+      >
         <div className="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           <div>
             <label className="block mb-2 font-medium text-slate-700 text-sm">Kategoriya</label>
@@ -245,15 +365,22 @@ function Products({ token }) {
           </div>
 
           <div className="md:col-span-1">
-            <label className="block mb-2 font-medium text-slate-700 text-sm">Rasm URL</label>
+            <label className="block mb-2 font-medium text-slate-700 text-sm">Rasm Yuklash</label>
             <input
-              type="text"
-              name="img_url"
-              placeholder="Rasm URL"
-              value={form.img_url}
-              onChange={handleInputChange}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
               className="px-4 py-3 border border-slate-300 focus:border-blue-500 rounded-lg outline-none focus:ring-2 focus:ring-blue-200 w-full transition-all duration-200"
             />
+            {imagePreview && (
+              <div className="mt-4">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-32 rounded-lg"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -288,20 +415,18 @@ function Products({ token }) {
             )}
             {editingId ? "Mahsulotni Yangilash" : "Mahsulot Yaratish"}
           </button>
-          {editingId && (
-            <button
-              onClick={handleCancel}
-              className="hover:bg-slate-50 px-6 py-3 border border-slate-200 rounded-lg font-medium text-slate-700 transition-all duration-200"
-            >
-              Bekor qilish
-            </button>
-          )}
+          <button
+            onClick={handleCancel}
+            className="hover:bg-slate-50 px-6 py-3 border border-slate-200 rounded-lg font-medium text-slate-700 transition-all duration-200"
+          >
+            Bekor qilish
+          </button>
         </div>
-      </div>
+      </Modal>
 
       {/* Filter */}
       <div className="mb-6">
-        <label className="block mb-2 font-medium text-slate-700 text-sm">Kategoriya bo‘yicha filtr</label>
+        <label className="block mb-2 font-medium text-slate-700 text-sm">Kategoriya bo'yicha filtr</label>
         <select
           value={filterCategory}
           onChange={(e) => handleFilter(e.target.value)}
@@ -326,9 +451,9 @@ function Products({ token }) {
             {product.img_url && (
               <div className="mb-4 rounded-lg overflow-hidden">
                 <img
-                  src={product.img_url || "/placeholder.svg"}
+                  src={product.img_url}
                   alt={product.name}
-                  className="w-full h-48 object-cover"
+                  className="w-full h-48"
                   onError={(e) => {
                     e.target.style.display = "none"
                   }}
@@ -367,7 +492,7 @@ function Products({ token }) {
               >
                 <svg className="mr-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
-                    strokeLinecap="round"
+                    strokeLinecap="roundofs"
                     strokeLinejoin="round"
                     strokeWidth={2}
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
