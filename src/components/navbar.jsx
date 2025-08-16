@@ -22,7 +22,8 @@ function Navbar({ setToken }) {
     { path: "/products", label: "Mahsulotlar" },
     { path: "/users", label: "Foydalanuvchilar" },
     { path: "/debt", label: "Qarzlar" },
-  ]
+    { path: "/orders", label: "Buyurtmalar" },
+  ];
 
   return (
     <nav className="bg-white shadow-lg border-slate-200 border-b">

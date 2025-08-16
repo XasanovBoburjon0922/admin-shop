@@ -9,6 +9,7 @@ import Products from "./components/products.jsx"
 import Users from "./components/users.jsx"
 import Navbar from "./components/navbar.jsx"
 import DebtsPage from "./components/debts.jsx"
+import Orders from "./components/orders.jsx"
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token") || "")
@@ -44,6 +45,7 @@ function App() {
         <Route path="/products" element={<Products token={token} />} />
         <Route path="/debt" element={<DebtsPage token={token} />} />
         <Route path="/users" element={<Users token={token} />} />
+        <Route path="/orders" element={<Orders token={token} />} />
       </Routes>
     </div>
   )

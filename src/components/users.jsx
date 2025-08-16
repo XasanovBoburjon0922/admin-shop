@@ -7,10 +7,14 @@ function Users({ token }) {
   const [form, setForm] = useState({ name: "", phone_number: "", password: "" })
   const [editingId, setEditingId] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("") // New state for search query
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("https://shop.uzjoylar.uz/users/list", {
+      const url = searchQuery
+        ? `https://shop.uzjoylar.uz/users/list?name=${encodeURIComponent(searchQuery)}`
+        : "https://shop.uzjoylar.uz/users/list"
+      const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await response.json()
@@ -22,11 +26,15 @@ function Users({ token }) {
 
   useEffect(() => {
     fetchUsers()
-  }, [])
+  }, [searchQuery]) // Re-fetch users when searchQuery changes
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setForm({ ...form, [name]: value })
+  }
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value) // Update search query state
   }
 
   const handleCreateOrUpdate = async () => {
@@ -88,6 +96,8 @@ function Users({ token }) {
         <p className="text-slate-600 text-lg">Foydalanuvchi hisoblarini va ma’lumotlarini boshqaring</p>
       </div>
 
+    
+
       {/* User Form */}
       <div className="bg-white shadow-lg mb-8 p-6 border border-slate-200 rounded-2xl">
         <h2 className="mb-6 font-semibold text-slate-800 text-xl">
@@ -132,6 +142,7 @@ function Users({ token }) {
             </div>
           )}
         </div>
+        
 
         <div className="flex gap-4 mt-6">
           <button
@@ -176,7 +187,17 @@ function Users({ token }) {
           )}
         </div>
       </div>
-
+  {/* Search Input */}
+  <div className="mb-6">
+        <label className="block mb-2 font-medium text-slate-700 text-sm">Ism bo‘yicha qidirish</label>
+        <input
+          type="text"
+          placeholder="Foydalanuvchi ismini kiriting"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          className="px-4 py-3 border border-slate-300 focus:border-blue-500 rounded-lg outline-none focus:ring-2 focus:ring-blue-200 w-full md:w-1/2 lg:w-1/3 transition-all duration-200"
+        />
+      </div>
       {/* Users Grid */}
       <div className="gap-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {users.map((user) => (
