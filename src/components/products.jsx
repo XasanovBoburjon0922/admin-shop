@@ -22,6 +22,26 @@ function Modal({ isOpen, onClose, title, children }) {
   )
 }
 
+function Toast({ message, isVisible, onClose }) {
+  if (!isVisible) return null;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50">
+      <div className="bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+        <span>{message}</span>
+        <button onClick={onClose} className="ml-4 text-white hover:text-gray-200">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Products({ token }) {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
@@ -41,6 +61,7 @@ function Products({ token }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedFile, setSelectedFile] = useState(null)
   const [imagePreview, setImagePreview] = useState("")
+  const [toast, setToast] = useState({ isVisible: false, message: "" })
 
   const fetchProducts = async (categoryId = "") => {
     const url = categoryId
@@ -97,13 +118,14 @@ function Products({ token }) {
     if (!selectedFile) return form.img_url || ""
 
     const formData = new FormData()
-    formData.append("image", selectedFile)
+    formData.append("file", selectedFile)
 
     try {
       const response = await fetch("https://shop.uzjoylar.uz/img-upload", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          accept: "application/json",
         },
         body: formData,
       })
@@ -113,15 +135,22 @@ function Products({ token }) {
         if (data.Message === "Successfully upload") {
           return data.Url
         } else {
-          throw new Error("Image upload failed")
+          throw new Error("Image upload failed: " + (data.Message || "Unknown error"))
         }
       } else {
-        throw new Error("Image upload failed")
+        throw new Error(`Image upload failed with status: ${response.status}`)
       }
     } catch (err) {
       console.error("Rasm yuklashda xatolik:", err)
       return ""
     }
+  }
+
+  const showToast = (message) => {
+    setToast({ isVisible: true, message })
+    setTimeout(() => {
+      setToast({ isVisible: false, message: "" })
+    }, 3000) // Toast disappears after 3 seconds
   }
 
   const handleCreateOrUpdate = async () => {
@@ -130,7 +159,6 @@ function Products({ token }) {
     setLoading(true)
     let imgUrl = form.img_url
 
-    // Upload image if a new file is selected
     if (selectedFile) {
       imgUrl = await handleImageUpload()
       if (!imgUrl) {
@@ -145,7 +173,7 @@ function Products({ token }) {
     const method = editingId ? "PUT" : "POST"
 
     try {
-      await fetch(url, {
+      const response = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -159,21 +187,27 @@ function Products({ token }) {
           size: Number.parseInt(form.size),
         }),
       })
-      setForm({
-        name: "",
-        category_id: "",
-        count: 0,
-        description: "",
-        img_url: "",
-        price: 0,
-        size: 0,
-        type: "g",
-      })
-      setSelectedFile(null)
-      setImagePreview("")
-      setEditingId(null)
-      setIsModalOpen(false)
-      fetchProducts(filterCategory)
+
+      if (response.ok) {
+        showToast(editingId ? "Mahsulot muvaffaqiyatli yangilandi!" : "Mahsulot muvaffaqiyatli yaratildi!")
+        setForm({
+          name: "",
+          category_id: "",
+          count: 0,
+          description: "",
+          img_url: "",
+          price: 0,
+          size: 0,
+          type: "g",
+        })
+        setSelectedFile(null)
+        setImagePreview("")
+        setEditingId(null)
+        setIsModalOpen(false)
+        fetchProducts(filterCategory)
+      } else {
+        throw new Error(`Mahsulotni saqlashda xatolik: ${response.status}`)
+      }
     } catch (err) {
       console.error("Mahsulotni saqlashda xatolik:", err)
     } finally {
@@ -424,7 +458,12 @@ function Products({ token }) {
         </div>
       </Modal>
 
-      {/* Filter */}
+      <Toast
+        message={toast.message}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ isVisible: false, message: "" })}
+      />
+
       <div className="mb-6">
         <label className="block mb-2 font-medium text-slate-700 text-sm">Kategoriya bo'yicha filtr</label>
         <select
@@ -441,7 +480,6 @@ function Products({ token }) {
         </select>
       </div>
 
-      {/* Products Grid */}
       <div className="gap-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {products.map((product) => (
           <div
@@ -492,7 +530,7 @@ function Products({ token }) {
               >
                 <svg className="mr-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
-                    strokeLinecap="roundofs"
+                    strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
