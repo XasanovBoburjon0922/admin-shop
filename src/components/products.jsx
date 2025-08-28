@@ -150,7 +150,7 @@ function Products({ token }) {
     setToast({ isVisible: true, message })
     setTimeout(() => {
       setToast({ isVisible: false, message: "" })
-    }, 3000) // Toast disappears after 3 seconds
+    }, 3000)
   }
 
   const handleCreateOrUpdate = async () => {
@@ -382,7 +382,7 @@ function Products({ token }) {
             >
               <option value="g">g</option>
               <option value="ml">ml</option>
-              <option value="dona">dona</option>
+              <option value="countable">dona</option>
             </select>
           </div>
 
@@ -481,80 +481,96 @@ function Products({ token }) {
       </div>
 
       <div className="gap-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {products.map((product) => (
-          <div
-            key={product.id}
-            className="bg-white hover:shadow-xl p-6 border border-slate-200 rounded-2xl transition-all duration-300"
-          >
-            {product.img_url && (
-              <div className="mb-4 rounded-lg overflow-hidden">
-                <img
-                  src={product.img_url}
-                  alt={product.name}
-                  className="w-full h-48"
-                  onError={(e) => {
-                    e.target.style.display = "none"
-                  }}
-                />
-              </div>
-            )}
-            <div className="mb-4">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-bold text-slate-800 text-lg">{product.name}</h3>
-                <span className="bg-blue-100 px-2 py-1 rounded-full font-medium text-blue-700 text-xs">
-                  {getCategoryName(product.category_id)}
-                </span>
-              </div>
-              <p className="mb-3 text-slate-600 text-sm">{product.description}</p>
-              <div className="gap-4 grid grid-cols-2 text-sm">
-                <div>
-                  <span className="text-slate-500">Narx:</span>
-                  <span className="ml-1 font-semibold text-slate-800">{product.price} so'm</span>
+        {products.map((product) => {
+          // Determine display size and type
+          let displaySize = product.size;
+          let displayType = product.type;
+
+          if (product.type === "g" && product.size >= 1000) {
+            displaySize = product.size / 1000;
+            displayType = "kg";
+          } else if (product.type === "ml" && product.size >= 1000) {
+            displaySize = product.size / 1000;
+            displayType = "l";
+          }
+          else if (product.type === "countable") {
+            displayType = "dona";
+          }
+          return (
+            <div
+              key={product.id}
+              className="bg-white hover:shadow-xl p-6 border border-slate-200 rounded-2xl transition-all duration-300"
+            >
+              {product.img_url && (
+                <div className="mb-4 rounded-lg overflow-hidden">
+                  <img
+                    src={product.img_url}
+                    alt={product.name}
+                    className="w-full h-48"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                    }}
+                  />
                 </div>
-                <div>
-                  <span className="text-slate-500">Zaxira:</span>
-                  <span className="ml-1 font-semibold text-slate-800">{product.count}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-slate-500">Hajm:</span>
-                  <span className="ml-1 font-semibold text-slate-800">
-                    {product.size} {product.type}
+              )}
+              <div className="mb-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-bold text-slate-800 text-lg">{product.name}</h3>
+                  <span className="bg-blue-100 px-2 py-1 rounded-full font-medium text-blue-700 text-xs">
+                    {getCategoryName(product.category_id)}
                   </span>
                 </div>
+                <p className="mb-3 text-slate-600 text-sm">{product.description}</p>
+                <div className="gap-4 grid grid-cols-2 text-sm">
+                  <div>
+                    <span className="text-slate-500">Narx:</span>
+                    <span className="ml-1 font-semibold text-slate-800">{product.price} so'm</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Zaxira:</span>
+                    <span className="ml-1 font-semibold text-slate-800">{product.count}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-slate-500">Hajm:</span>
+                    <span className="ml-1 font-semibold text-slate-800">
+                      {displaySize} {displayType}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-4 border-slate-200 border-t">
+                <button
+                  onClick={() => handleEdit(product)}
+                  className="flex flex-1 justify-center items-center hover:bg-blue-50 p-2 rounded-lg text-blue-600 transition-all duration-200"
+                >
+                  <svg className="mr-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                  Tahrirlash
+                </button>
+                <button
+                  onClick={() => handleDelete(product.id)}
+                  className="flex flex-1 justify-center items-center hover:bg-red-50 p-2 rounded-lg text-red-600 transition-all duration-200"
+                >
+                  <svg className="mr-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  O‘chirish
+                </button>
               </div>
             </div>
-            <div className="flex gap-2 pt-4 border-slate-200 border-t">
-              <button
-                onClick={() => handleEdit(product)}
-                className="flex flex-1 justify-center items-center hover:bg-blue-50 p-2 rounded-lg text-blue-600 transition-all duration-200"
-              >
-                <svg className="mr-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-                Tahrirlash
-              </button>
-              <button
-                onClick={() => handleDelete(product.id)}
-                className="flex flex-1 justify-center items-center hover:bg-red-50 p-2 rounded-lg text-red-600 transition-all duration-200"
-              >
-                <svg className="mr-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-                O‘chirish
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {products.length === 0 && (

@@ -5,9 +5,9 @@ import { Link } from "https://cdn.jsdelivr.net/npm/react-router-dom@6.14.0/+esm"
 
 function Dashboard() {
   const [stats, setStats] = useState({
-    categories: 3,
-    products: 2,
-    users: 3,
+    categories: 0,
+    products: 0,
+    users: 0,
     totalDebt: 0,
   })
 
@@ -15,17 +15,38 @@ function Dashboard() {
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem("token")
-        // Replace with actual API endpoint
-        const response = await fetch("https://shop.uzjoylar.uz/stats", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!response.ok) throw new Error("Statistikalarni olishda xatolik")
-        const data = await response.json()
+        const headers = { Authorization: `Bearer ${token}` }
+
+        // Fetch categories
+        const categoriesResponse = await fetch("https://shop.uzjoylar.uz/category/list", { headers })
+        if (!categoriesResponse.ok) throw new Error("Kategoriyalarni olishda xatolik")
+        const categoriesData = await categoriesResponse.json()
+
+        // Fetch products
+        const productsResponse = await fetch("https://shop.uzjoylar.uz/product/list", { headers })
+        if (!productsResponse.ok) throw new Error("Mahsulotlarni olishda xatolik")
+        const productsData = await productsResponse.json()
+
+        // Fetch users
+        const usersResponse = await fetch("https://shop.uzjoylar.uz/users/list", { headers })
+        if (!usersResponse.ok) throw new Error("Foydalanuvchilarni olishda xatolik")
+        const usersData = await usersResponse.json()
+
+        // Fetch debts with status "took"
+        const debtsResponse = await fetch("https://shop.uzjoylar.uz/debt/get?status=took", { headers })
+        if (!debtsResponse.ok) throw new Error("Qarzlarni olishda xatolik")
+        const debtsData = await debtsResponse.json()
+
+        // Calculate total debt for active debts (status "took" and given_time is null)
+        const totalDebt = debtsData.debt_logs
+          .filter(debt => debt.status === "took" && debt.given_time === null)
+          .reduce((sum, debt) => sum + debt.amount, 0)
+
         setStats({
-          categories: data.categories || 3,
-          products: data.products || 2,
-          users: data.users || 3,
-          totalDebt: data.totalDebt || 0,
+          categories: categoriesData.count || 0,
+          products: productsData.count || 0,
+          users: usersData.count || 0,
+          totalDebt: totalDebt || 0,
         })
       } catch (error) {
         console.error("Statistikalarni olishda xatolik:", error)
