@@ -79,33 +79,23 @@ export default function OrdersPage() {
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
-      // Find the order to get the product_id from the first item in order.orders
-      const order = orders.find((o) => o.id === orderId);
-      const productId = order.orders[0]?.product_id; // Use the first item's product_id
-      if (!productId) {
-        throw new Error("No product_id found for this order");
-      }
-  
-      const response = await fetch(`https://shop.uzjoylar.uz/order/update?id=${productId}`, {
+      const response = await fetch(`https://shop.uzjoylar.uz/order/update?id=${orderId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ status: newStatus }),
-      });
+      })
       if (!response.ok) {
-        throw new Error("Failed to update status");
+        throw new Error("Failed to update status")
       }
       setOrders(
         orders.map((order) =>
           order.id === orderId ? { ...order, status: newStatus } : order
         )
-      );
-      setExpandedOrder(null);
+      )
+      setExpandedOrder(null)
     } catch (err) {
-      setError("Holatni yangilashda xatolik yuz berdi");
+      setError("Holatni yangilashda xatolik yuz berdi")
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
